@@ -41,8 +41,14 @@ namespace dsp56k
 			m_funcExecOne(_jit, _pc, _func);
 		}
 
+		bool canExecUntilCycles() const noexcept
+		{
+			return m_funcExecUntilCycles != nullptr;
+		}
+
 		TWord execUntilCycles(DSP* _dsp, const uint64_t _targetCycles) const noexcept
 		{
+			assert(m_funcExecUntilCycles);
 			return m_funcExecUntilCycles(_dsp, _targetCycles);
 		}
 

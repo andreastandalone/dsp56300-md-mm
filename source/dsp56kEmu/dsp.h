@@ -214,9 +214,22 @@ namespace dsp56k
 
 			if constexpr(g_useJIT)
 			{
+				auto& trampoline = m_jit.getTrampoline();
+				if(!trampoline.canExecUntilCycles())
+				{
+					// JitRuntime::add() can fail without throwing. Keep the scheduler
+					// functional if the bounded trampoline was not installed instead of
+					// calling a null function pointer. The ordinary exec() path preserves
+					// the same one-block deadline granularity.
+					do
+						exec();
+					while(m_cycles < _targetCycles);
+					return;
+				}
+
 				while(m_cycles < _targetCycles)
 				{
-					const TWord invalidPC = m_jit.getTrampoline().execUntilCycles(this, _targetCycles);
+					const TWord invalidPC = trampoline.execUntilCycles(this, _targetCycles);
 					if(invalidPC == 0xffffffffu)
 						return;
 

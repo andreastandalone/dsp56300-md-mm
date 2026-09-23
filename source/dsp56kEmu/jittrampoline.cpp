@@ -330,6 +330,11 @@ namespace dsp56k
 		m_asm.cmp(r32(g_funcArgGPs[1]), r32(g_funcArgGPs[0]));
 		m_asm.b(asmjit::arm::CondCode::kUnsignedGE, invalidPC);
 		m_asm.ldr(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3, 8));
+		// A valid PC can temporarily have no compiled block after P-memory
+		// invalidation. Return that PC to DSP::execUntilCycles(), whose existing
+		// recovery path rebuilds/grows dispatch state, rather than calling null.
+		m_asm.cmp(g_funcToCall, asmjit::Imm(0));
+		m_asm.b(asmjit::arm::CondCode::kEQ, invalidPC);
 		m_asm.mov(r64(g_funcArgGPs[0]), regDspPtr);
 		m_asm.blr(g_funcToCall);
 
@@ -351,6 +356,8 @@ namespace dsp56k
 		m_asm.cmp(r32(g_funcArgGPs[1]), Jitmem::makeRelativePtr(&m_dsp.getJitEntriesSize(), &m_dsp, dsp, 4));
 		m_asm.jae(invalidPC);
 		m_asm.mov(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3, 8));
+		m_asm.test(g_funcToCall, g_funcToCall);
+		m_asm.jz(invalidPC);
 		m_asm.mov(r64(g_funcArgGPs[0]), regDspPtr);
 		m_asm.call(g_funcToCall);
 
